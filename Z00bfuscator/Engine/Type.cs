@@ -8,6 +8,7 @@
 #endregion
 
 using Mono.Cecil;
+using System.Collections.Generic;
 
 namespace Z00bfuscator
 {
@@ -54,6 +55,12 @@ namespace Z00bfuscator
             if (type.Name == "<Module>")
                 flag = false;
 
+            if (type.Name == "Program")
+                flag = false;
+
+            if (type.Name == "Startup")
+                flag = false;
+
             if (type.IsRuntimeSpecialName)
                 flag = false;
 
@@ -69,7 +76,30 @@ namespace Z00bfuscator
             if (type.Name.Contains("__"))
                 flag = false;
 
+            if (type.IsEnum)
+                flag = false;
+
+            //if (type.HasCustomAttributes && ContainsCustomerAttributes(type.CustomAttributes.ToArray(),new List<string>{ "CompilerGeneratedAttribute", "NotObfuscateAttribute" }))
+            //{
+            //    flag = false;
+            //}
+
+            if (type.Name.EndsWith("Attribute"))
+                flag = false;
+
             return flag;
+        }
+
+        private static bool ContainsCustomerAttributes(CustomAttribute[] customAttributes, List<string> attributesNames)
+        {
+            foreach(CustomAttribute attribute in customAttributes)
+            {
+                if(attributesNames.Contains(attribute.AttributeType.Name))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         #endregion

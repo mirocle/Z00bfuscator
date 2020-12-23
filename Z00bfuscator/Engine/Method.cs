@@ -8,7 +8,7 @@
 #endregion
 
 using System;
-
+using System.Collections.Generic;
 using Mono.Cecil;
 
 namespace Z00bfuscator
@@ -55,6 +55,12 @@ namespace Z00bfuscator
                 }
 
             method.Name = obfuscatedName;
+
+            foreach (AssemblyDefinition assembly in m_assemblyDefinitions)
+                foreach (ModuleDefinition module in assembly.Modules)
+                    foreach (MemberReference memberReference in module.GetMemberReferences())
+                        if (memberReference.Name == initialName && memberReference.DeclaringType.Name == type.Name && memberReference.DeclaringType.Namespace == type.Namespace)
+                            memberReference.Name = obfuscatedName;
         }
 
         public static bool IsMethodObfuscatable(MethodDefinition method) {
@@ -89,6 +95,14 @@ namespace Z00bfuscator
 
             if (method.Name.StartsWith("Main"))
                 flag = false;
+
+            if (method.IsStatic)
+                flag = false;
+
+            if (method.HasCustomAttributes && ContainsCustomerAttributes(method.CustomAttributes.ToArray(), new List<string> { "AsyncStateMachineAttribute" }))
+            {
+                flag = false;
+            }
 
             return flag;
         }

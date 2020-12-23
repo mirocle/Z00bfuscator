@@ -58,6 +58,12 @@ namespace Z00bfuscator
             if (type.Name == "<Module>")
                 flag = false;
 
+            if (type.Name == "Program")
+                flag = false;
+
+            if (type.Name == "Startup")
+                flag = false;
+
             if (type.IsRuntimeSpecialName)
                 flag = false;
 
@@ -75,6 +81,14 @@ namespace Z00bfuscator
 
             if (type.Namespace.Length < 1)
                 flag = false;
+
+            //if (type.Name.EndsWith("Attribute"))
+            //    flag = false;
+
+            if (type.HasCustomAttributes && ContainsCustomerAttributes(type.CustomAttributes.ToArray(), new List<string> { "NotObfuscateAttribute" }))
+            {
+                flag = false;
+            }
 
             return flag;
         }

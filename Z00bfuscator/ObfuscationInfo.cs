@@ -7,11 +7,14 @@
 // ====================================================
 #endregion
 
+using System.Collections.Generic;
+
 namespace Z00bfuscator
 {
     public struct ObfuscationInfo
     {
         public string OutputDirectory { get; set; }
+        public string TempCreateDirectory { get; set; }
         public bool ObfuscateTypes { get; set; }
         public bool ObfuscateMethods { get; set; }
         public bool ObfuscateNamespaces { get; set; }
@@ -19,14 +22,18 @@ namespace Z00bfuscator
         public bool ObfuscateFields { get; set; }
         public bool ObfuscateResources { get; set; }
 
-        public ObfuscationInfo(string outputDirectory, bool obfuscateTypes, bool obfuscateMethods, bool obfuscateNamespaces, bool obfuscateProperties, bool obfuscateFields, bool obfuscateResources) : this() {
+        public List<string> excludedTypes { get; set; }
+
+        public ObfuscationInfo(string outputDirectory, string tempCreateDirectory, bool obfuscateTypes, bool obfuscateMethods, bool obfuscateNamespaces, bool obfuscateProperties, bool obfuscateFields, bool obfuscateResources, List<string> excludedTypes) : this() {
             this.OutputDirectory = outputDirectory;
+            this.TempCreateDirectory = tempCreateDirectory;
             this.ObfuscateTypes = obfuscateTypes;
             this.ObfuscateMethods = obfuscateMethods;
             this.ObfuscateNamespaces = obfuscateNamespaces;
             this.ObfuscateProperties = obfuscateProperties;
             this.ObfuscateFields = obfuscateFields;
             this.ObfuscateResources = obfuscateResources;
+            this.excludedTypes = excludedTypes;
         }
     }
 }

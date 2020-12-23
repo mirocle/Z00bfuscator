@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "Z00bfuscator": {
+      "commandName": "Project",
+      // "commandLineArgs": "D:\\ObTest\\Medusa.Service.Platform.Core.dll D:\\ObTest\\Medusa.Service.Platform.Application.dll D:\\ObTest\\Medusa.Service.Platform.SSO.dll D:\\ObTest\\Medusa.Service.Platform.FetchUser.dll D:\\ObTest\\Medusa.Service.Platform.Entrance.dll"
+      // "commandLineArgs": "D:\\ObTest\\Medusa.Engine.Core.dll D:\\ObTest\\Medusa.Engine.Modules.EventStore.dll D:\\ObTest\\Medusa.Engine.Modules.Query.dll D:\\ObTest\\Medusa.Engine.Modules.RestExecutor.dll D:\\ObTest\\Medusa.Engine.RestEntrance.dll"
+      // "commandLineArgs": "D:\\ObTest\\Medusa.Engine.Core.dll D:\\ObTest\\Medusa.Engine.Modules.EventStore.dll D:\\ObTest\\Medusa.Engine.Modules.Activity.dll D:\\ObTest\\Medusa.Engine.Modules.Instance.dll D:\\ObTest\\Medusa.Engine.Context.dll D:\\ObTest\\Medusa.Engine.Modules.Endpoint.dll D:\\ObTest\\Medusa.Engine.Modules.IDiscovery.dll  D:\\ObTest\\Medusa.Engine.EventEntrance.dll"
+      // "commandLineArgs": "D:\\ObTest\\Medusa.Service.Form.Core.dll D:\\ObTest\\Medusa.Service.Form.Application.dll D:\\ObTest\\Medusa.Service.Form.Entrance.dll"
+      // "commandLineArgs": "D:\\ObTest\\Medusa.Service.Process.Core.dll D:\\ObTest\\Medusa.Service.Process.Application.dll D:\\ObTest\\Medusa.Service.Process.Entrance.dll"
+      "commandLineArgs": "D:\\ObTest\\Medusa.Service.TodoCentre.Core.dll D:\\ObTest\\Medusa.Service.TodoCentre.Docking.dll D:\\ObTest\\Medusa.Service.TodoCentre.Application.dll D:\\ObTest\\Medusa.Service.TodoCentre.Entrance.dll"
+    }
+  }
+}

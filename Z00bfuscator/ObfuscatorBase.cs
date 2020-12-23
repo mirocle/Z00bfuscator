@@ -14,9 +14,9 @@ namespace Z00bfuscator
     public abstract class ObfuscatorBase {
         protected abstract void AsyncStartObfuscation();
 
-        protected abstract void UpdateProgress(string message, int percent);
+        // protected abstract void UpdateProgress(string message, int percent);
 
-        protected abstract void LogProgress(string message);
+        // protected abstract void LogProgress(string message);
 
         protected abstract void DoObfuscateField(TypeDefinition type, FieldDefinition field);
 

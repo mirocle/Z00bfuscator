@@ -15,6 +15,7 @@ using System.Collections.Generic;
 
 using Mono.Cecil;
 using System.Text;
+using Z00bfuscator.Engine;
 
 namespace Z00bfuscator
 {
@@ -43,6 +44,8 @@ namespace Z00bfuscator
         private XmlDocument m_xmlDocument;
         private XmlElement m_xmlElement;
 
+        private List<ItemMap> itemMaps = new List<ItemMap>();
+
         public event DelOutputEvent OnOutputEvent;
         public event DelNameObfuscated OnNameObfuscated;
         public event DelProgress OnProgress;
@@ -53,7 +56,8 @@ namespace Z00bfuscator
 
         public Obfuscator(ObfuscationInfo obfuscationInfo) {
             this.m_obfuscationInfo = obfuscationInfo;
-            this.m_obfuscationProgress = new ObfuscationProgress(); 
+            this.m_obfuscationProgress = new ObfuscationProgress();
+            this.m_excludedTypes = obfuscationInfo.excludedTypes;
         }
 
         #endregion
@@ -75,13 +79,13 @@ namespace Z00bfuscator
         #endregion
 
         #region Events
-        protected override void UpdateProgress(string message, int percent) {
-            OnProgress?.Invoke(message, percent);
-        }
+        //protected override void UpdateProgress(string message, int percent) {
+        //    OnProgress?.Invoke(message, percent);
+        //}
 
-        protected override void LogProgress(string message) {
-            OnOutputEvent?.Invoke(message);
-        }
+        //protected override void LogProgress(string message) {
+        //    OnOutputEvent?.Invoke(message);
+        //}
 
         #endregion
 
@@ -96,29 +100,39 @@ namespace Z00bfuscator
             List<string> assembliesPaths = new List<string>();
             List<bool> assembliesToObfuscate = new List<bool>();
 
-            LogProgress("[0]: Starting...");
+            //LogProgress("[0]: Starting...");
 
             this.m_xmlDocument = new XmlDocument();
             this.m_xmlElement = this.m_xmlDocument.CreateElement("mappings");
             this.m_xmlDocument.AppendChild(m_xmlElement);
 
-            UpdateProgress("[1]: Loading assemblies...", 10);
+            // UpdateProgress("[1]: Loading assemblies...", 10);
             foreach (string assemblyPath in m_assemblies.Keys) {
                 try {
-                    AssemblyDefinition assembly = AssemblyDefinition.ReadAssembly(assemblyPath);
-                    foreach (ModuleDefinition module in assembly.Modules)
-                        LogProgress($"[OK]: Module loaded: {module.Name}");
+                    DefaultAssemblyResolver resolver = new DefaultAssemblyResolver();
+                    resolver.AddSearchDirectory(m_obfuscationInfo.TempCreateDirectory); // 增加目标目录 
 
-                    this.m_assemblyDefinitions.Add(assembly);
-                    assembliesPaths.Add(Path.GetFileName(assemblyPath));
-                    assembliesToObfuscate.Add(m_assemblies[assemblyPath]);
+                    ReaderParameters parameters = new ReaderParameters()
+                    {
+                        AssemblyResolver = resolver, // 将增加好目标目录的对象作为参数给AssemblyResolver
+                        ReadSymbols = false,
+                    };
+
+                    AssemblyDefinition assembly = AssemblyDefinition.ReadAssembly(assemblyPath, parameters);
+   
+                        //foreach (ModuleDefinition module in assembly.Modules)
+                        //    LogProgress($"[OK]: Module loaded: {module.Name}");
+
+                        this.m_assemblyDefinitions.Add(assembly);
+                        assembliesPaths.Add(Path.GetFileName(assemblyPath));
+                        assembliesToObfuscate.Add(m_assemblies[assemblyPath]);
                 } catch (Exception ex) {
-                    LogProgress($"[ERR]: Module load failed: {ex.Message}");
+                    //LogProgress($"[ERR]: Module load failed: {ex.Message}");
                     continue;
                 }
             }
 
-            UpdateProgress("[2]: Starting obfuscate...", 20);
+            // UpdateProgress("[2]: Start obfuscate...", 20);
 
             int progressCurrent = 20;
             int progressIncrement = 60 / this.m_assemblyDefinitions.Count;
@@ -130,64 +144,91 @@ namespace Z00bfuscator
                 if (!assembliesToObfuscate[assemblyIndex])
                     continue;
 
-                LogProgress("Obfuscating assembly: " + assembly.Name.Name);
+                //LogProgress("Obfuscating assembly: " + assembly.Name.Name);
 
-                LogProgress("Obfuscating Types");
-                foreach (TypeDefinition type in assembly.MainModule.Types)
-                    DoObfuscateType(type);
+                if (m_obfuscationInfo.ObfuscateTypes)
+                {
+                    //LogProgress("Obfuscating Types");
+                    foreach (TypeDefinition type in assembly.MainModule.Types)
+                        DoObfuscateType(type);
+                }
+
 
                 if (m_obfuscationInfo.ObfuscateNamespaces)
-                    LogProgress("Obfuscating Namespaces");
+                {
+                    // LogProgress("Obfuscating Namespaces");
                     foreach (TypeDefinition type in assembly.MainModule.Types)
                         DoObfuscateNamespace(type);
+                }
+
 
                 if (m_obfuscationInfo.ObfuscateResources)
-                    LogProgress("Obfuscating Resources");
+                {
+                    //LogProgress("Obfuscating Resources");
                     foreach (Resource resource in assembly.MainModule.Resources)
                         DoObfuscateResource(resource);
+                }
 
                 progressCurrent += progressIncrement;
             }
 
-            UpdateProgress("[3]: Saving assembly...", 80);
+            // UpdateProgress("[3]: Save assembly...", 70);
 
             assemblyIndex = -1;
             foreach (AssemblyDefinition assembly in m_assemblyDefinitions) {
                 assemblyIndex++;
 
-                if (Directory.Exists(this.m_obfuscationInfo.OutputDirectory) == false)
-                    Directory.CreateDirectory(this.m_obfuscationInfo.OutputDirectory);
+                if (Directory.Exists(this.m_obfuscationInfo.TempCreateDirectory) == false)
+                    Directory.CreateDirectory(this.m_obfuscationInfo.TempCreateDirectory);
 
-                string outputFileName = Path.Combine(this.m_obfuscationInfo.OutputDirectory, "Obfuscated_" + assembliesPaths[assemblyIndex]);
+                string outputFileName = Path.Combine(this.m_obfuscationInfo.TempCreateDirectory, "Obfuscated_" + assembliesPaths[assemblyIndex]);
+                //string outputFileName = Path.Combine(this.m_obfuscationInfo.TempCreateDirectory, assembliesPaths[assemblyIndex]);
 
                 if (File.Exists(outputFileName))
                     File.Delete(outputFileName);
 
                 assembly.Write(outputFileName);
+                assembly.Dispose();
+                File.Copy(outputFileName, Path.Combine(m_obfuscationInfo.TempCreateDirectory, assembliesPaths[assemblyIndex]), true);
+                File.Delete(outputFileName);
             }
 
-            this.m_xmlDocument.Save(Path.Combine(m_obfuscationInfo.OutputDirectory, "Mapping.xml"));
+            this.m_xmlDocument.Save(Path.Combine(m_obfuscationInfo.TempCreateDirectory, "Mapping.xml"));
 
-            UpdateProgress("[4]: Testing assembly...", 90);
+            // UpdateProgress("[4]: Test assembly...", 80);
 
-            foreach (string assemblyPath in this.m_assemblies.Keys) {
-                if (!File.Exists(assemblyPath)) {
-                    LogProgress($"[FAIL]: File not exists: {assemblyPath}");
-                    continue;
-                }
+            //foreach (string assemblyPath in this.m_assemblies.Keys) {
+            //    if (!File.Exists(assemblyPath)) {
+            //        //LogProgress($"[FAIL]: File not exists: {assemblyPath}");
+            //        continue;
+            //    }
 
-                try {
-                    AssemblyDefinition assembly = AssemblyDefinition.ReadAssembly(assemblyPath);
-                    foreach (ModuleDefinition module in assembly.Modules)
-                        LogProgress($"[OK]: {module.Name}");
+            //    try {
+            //        AssemblyDefinition assembly = AssemblyDefinition.ReadAssembly(assemblyPath);
+            //        //foreach (ModuleDefinition module in assembly.Modules)
+            //        //    LogProgress($"[OK]: {module.Name}");
 
-                } catch (Exception ex) {
-                    LogProgress($"[FAIL]: {assemblyPath} - Exception: {ex.Message}");
-                }
+            //    } catch (Exception ex) {
+            //        //LogProgress($"[FAIL]: {assemblyPath} - Exception: {ex.Message}");
+            //    }
+
+            //}
+
+            // UpdateProgress("[5]: Copy assembly...", 90);
+            foreach(string filePath in Directory.GetFiles(m_obfuscationInfo.TempCreateDirectory, "*.dll"))
+            {
+                string fileName = new FileInfo(filePath).Name;
+                //if (fileName.StartsWith("Obfuscated_"))
+                //{
+                //    File.Copy(filePath, Path.Combine(m_obfuscationInfo.OutputDirectory, fileName.Replace("Obfuscated_", "")), true);
+                //    // File.Delete(filePath);
+                //}
+                File.Copy(filePath, Path.Combine(m_obfuscationInfo.OutputDirectory, fileName), true);
 
             }
+            Directory.Delete(m_obfuscationInfo.TempCreateDirectory, true);
 
-            UpdateProgress("[5]: Complete.", 100);
+            // UpdateProgress("[6]: Complete.", 100);
         }
 
         #endregion
@@ -206,7 +247,7 @@ namespace Z00bfuscator
                     break;
 
                 case ObfuscationItem.Type:
-                    if (!this.m_obfuscationInfo.ObfuscateTypes)
+                    if (!this.m_obfuscationInfo.ObfuscateTypes || initialName.EndsWith("Controller")) // || initialName.Equals("NotObfuscateAttribute")
                         return initialName;
                     this.m_obfuscationProgress.CurrentObfuscatedTypeID++;
                     obfuscated = this.GetObfuscatedFormat(item, initialName, this.m_obfuscationProgress.CurrentObfuscatedTypeID);
@@ -240,7 +281,17 @@ namespace Z00bfuscator
         }
 
         string GetObfuscatedFormat(ObfuscationItem item, string initialName, ulong index) {
-            return string.Format("[SECURED-by-Z00bfuscator]-{0}-{1}", this.EncryptAsCaesar(initialName, 1), index);
+            var mapItem = itemMaps.Find(d => d.Type == item.ToString() && d.InitialValue == initialName);
+            if(mapItem != null)
+            {
+                return mapItem.ObfuscatedValue;
+            }
+            else
+            {
+                string obfuscatedValue = string.Format("SECURED-by-Movitech-{0}-{1}", this.EncryptAsCaesar(initialName, 1), index);
+                itemMaps.Add(new ItemMap() { Type = item.ToString(), InitialValue = initialName, ObfuscatedValue = obfuscatedValue });
+                return obfuscatedValue;
+            }
         }
 
         string EncryptAsCaesar(string value, int shift) {
@@ -249,9 +300,10 @@ namespace Z00bfuscator
             for (int i = 0; i < buffer.Length; i++) {
                 letter = buffer[i];
                 letter = (char)(letter + shift);
-                if (letter > 'z') {
+                while (letter > 'z') {
                     letter = (char)(letter - 26);
-                } else if (letter < 'a') {
+                }
+                while (letter < 'a') {
                     letter = (char)(letter + 26);
                 }
                 buffer[i] = letter;
@@ -266,7 +318,6 @@ namespace Z00bfuscator
             element.SetAttribute("InitialValue", initialName);
             element.SetAttribute("ObfuscatedValue", obfuscated);
         }
-
         #endregion
 
     }
